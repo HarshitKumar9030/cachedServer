@@ -6,7 +6,7 @@ const { exec } = require('child_process');
 const Video = require('../models/Video');
 const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 
-const DOWNLOADS_FOLDER = '/var/www/videos';
+const DOWNLOADS_FOLDER = '/home/harshit/cachedServer';
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10);
 
 async function checkStorageSize(folder) {
