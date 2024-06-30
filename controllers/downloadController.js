@@ -3,11 +3,16 @@ const path = require('path');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const { exec } = require('child_process');
+const { pipeline } = require('stream');
 const Video = require('../models/Video');
 const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 
-const DOWNLOADS_FOLDER = '/home/harshit/cachedServer/videos';
+const DOWNLOADS_FOLDER = '/home/azureuser/cachedServer/videos';
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10);
+
+// Set the path to the ffmpeg and ffprobe binaries
+ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');  // Update this path if necessary
+ffmpeg.setFfprobePath('/usr/bin/ffprobe');  // Update this path if necessary
 
 async function checkStorageSize(folder) {
   try {
@@ -20,7 +25,7 @@ async function checkStorageSize(folder) {
 
 exports.downloadVideo = async (req, res) => {
   try {
-    const { url } = req.body; // Changed to req.body to match POST request
+    const { url } = req.body;
 
     if (!url || !ytdl.validateURL(url)) {
       console.log('Invalid or missing URL:', url);
@@ -47,12 +52,13 @@ exports.downloadVideo = async (req, res) => {
 
     const tempFilePath = path.join(DOWNLOADS_FOLDER, `${title}.mp4`);
     console.log('Temporary file path:', tempFilePath);
-    const videoStream = ytdl(url, { quality: 'highest' });
 
+    const videoStream = ytdl(url, { quality: 'highest' });
     const fileStream = fs.createWriteStream(tempFilePath);
+
     videoStream.pipe(fileStream);
 
-    fileStream.on('finish', async () => {
+    fileStream.on('finish', () => {
       console.log('Video downloaded:', tempFilePath);
 
       // Probe the video to check streams
@@ -69,37 +75,43 @@ exports.downloadVideo = async (req, res) => {
           return res.status(500).json({ error: 'No streams found in downloaded video' });
         }
 
-        ffmpeg(tempFilePath)
+        console.log('Video streams:', metadata.streams);
+
+        const ffmpegCommand = ffmpeg(tempFilePath)
+          .inputOptions('-f mp4')  // Explicitly specify the input format
           .toFormat('wav')
-          .audioCodec('pcm_s16le')
-          .on('end', async () => {
-            try {
-              console.log('FFmpeg conversion completed, saving video info to DB and cleaning up...');
-              await Video.create({ videoId, format: 'wav', filePath });
-              await updateTrendingWords(title, stopWords);
-              fs.removeSync(tempFilePath);
+          .audioCodec('pcm_s16le');
 
-              exec('sh ./scripts/syncVideos.sh', (error, stdout, stderr) => {
-                if (error) {
-                  console.error(`Error executing sync script: ${error.message}`);
-                  return;
-                }
-                console.log(`Sync script output: ${stdout}`);
-                console.error(`Sync script errors: ${stderr}`);
-              });
+        const wavStream = fs.createWriteStream(filePath);
 
-              res.json({ filePath, title });
-            } catch (error) {
-              console.error(`Error saving video or updating trends: ${error.message}`);
-              res.status(500).json({ error: `Error saving video or updating trends: ${error.message}` });
-            }
-          })
-          .on('error', (err) => {
+        pipeline(ffmpegCommand, wavStream, async (err) => {
+          if (err) {
             fs.removeSync(tempFilePath);
             console.error(`Error converting video to WAV: ${err.message}`);
-            res.status(500).json({ error: `Error converting video to WAV: ${err.message}` });
-          })
-          .save(filePath);
+            return res.status(500).json({ error: `Error converting video to WAV: ${err.message}` });
+          }
+
+          try {
+            console.log('FFmpeg conversion completed, saving video info to DB and cleaning up...');
+            await Video.create({ videoId, format: 'wav', filePath });
+            await updateTrendingWords(title, stopWords);
+            fs.removeSync(tempFilePath);
+
+            exec('sh ./scripts/syncVideos.sh', (error, stdout, stderr) => {
+              if (error) {
+                console.error(`Error executing sync script: ${error.message}`);
+                return;
+              }
+              console.log(`Sync script output: ${stdout}`);
+              console.error(`Sync script errors: ${stderr}`);
+            });
+
+            res.json({ filePath, title });
+          } catch (error) {
+            console.error(`Error saving video or updating trends: ${error.message}`);
+            res.status(500).json({ error: `Error saving video or updating trends: ${error.message}` });
+          }
+        });
       });
     });
 
