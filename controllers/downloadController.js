@@ -55,37 +55,52 @@ exports.downloadVideo = async (req, res) => {
     fileStream.on('finish', async () => {
       console.log('Video downloaded:', tempFilePath);
 
-      ffmpeg(tempFilePath)
-        .toFormat('wav')
-        .audioCodec('pcm_s16le')
-        .on('end', async () => {
-          try {
-            console.log(`FFmpeg conversion completed, saving video info to DB and cleaning up...`);
-            await Video.create({ videoId, format: 'wav', filePath });
-            await updateTrendingWords(title, stopWords);
-            fs.removeSync(tempFilePath);
-
-            exec('sh ./scripts/syncVideos.sh', (error, stdout, stderr) => {
-              if (error) {
-                console.error(`Error executing sync script: ${error.message}`);
-                return;
-              }
-              console.log(`Sync script output: ${stdout}`);
-              console.error(`Sync script errors: ${stderr}`);
-            });
-
-            res.json({ filePath, title });
-          } catch (error) {
-            console.error(`Error saving video or updating trends: ${error.message}`);
-            res.status(500).json({ error: `Error saving video or updating trends: ${error.message}` });
-          }
-        })
-        .on('error', (err) => {
+      // Probe the video to check streams
+      ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
+        if (err) {
           fs.removeSync(tempFilePath);
-          console.error(`Error converting video to WAV: ${err.message}`);
-          res.status(500).json({ error: `Error converting video to WAV: ${err.message}` });
-        })
-        .save(filePath);
+          console.error(`FFmpeg probe error: ${err.message}`);
+          return res.status(500).json({ error: `FFmpeg probe error: ${err.message}` });
+        }
+
+        if (!metadata.streams || metadata.streams.length === 0) {
+          fs.removeSync(tempFilePath);
+          console.error('No streams found in downloaded video');
+          return res.status(500).json({ error: 'No streams found in downloaded video' });
+        }
+
+        ffmpeg(tempFilePath)
+          .toFormat('wav')
+          .audioCodec('pcm_s16le')
+          .on('end', async () => {
+            try {
+              console.log('FFmpeg conversion completed, saving video info to DB and cleaning up...');
+              await Video.create({ videoId, format: 'wav', filePath });
+              await updateTrendingWords(title, stopWords);
+              fs.removeSync(tempFilePath);
+
+              exec('sh ./scripts/syncVideos.sh', (error, stdout, stderr) => {
+                if (error) {
+                  console.error(`Error executing sync script: ${error.message}`);
+                  return;
+                }
+                console.log(`Sync script output: ${stdout}`);
+                console.error(`Sync script errors: ${stderr}`);
+              });
+
+              res.json({ filePath, title });
+            } catch (error) {
+              console.error(`Error saving video or updating trends: ${error.message}`);
+              res.status(500).json({ error: `Error saving video or updating trends: ${error.message}` });
+            }
+          })
+          .on('error', (err) => {
+            fs.removeSync(tempFilePath);
+            console.error(`Error converting video to WAV: ${err.message}`);
+            res.status(500).json({ error: `Error converting video to WAV: ${err.message}` });
+          })
+          .save(filePath);
+      });
     });
 
     fileStream.on('error', (err) => {
