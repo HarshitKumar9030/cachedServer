@@ -69,13 +69,14 @@ exports.downloadVideo = async (req, res) => {
           return res.status(500).json({ error: `FFmpeg probe error: ${err.message}` });
         }
 
-        if (!metadata.streams || metadata.streams.length === 0) {
+        const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
+        if (!audioStream) {
           fs.removeSync(tempFilePath);
-          console.error('No streams found in downloaded video');
-          return res.status(500).json({ error: 'No streams found in downloaded video' });
+          console.error('No audio streams found in downloaded video');
+          return res.status(500).json({ error: 'No audio streams found in downloaded video' });
         }
 
-        console.log('Video streams:', metadata.streams);
+        console.log('Audio stream found:', audioStream);
 
         const ffmpegCommand = ffmpeg(tempFilePath)
           .inputOptions('-f mp4')  // Explicitly specify the input format
