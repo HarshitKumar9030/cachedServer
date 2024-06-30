@@ -58,7 +58,7 @@ exports.downloadVideo = async (req, res) => {
 
     videoStream.pipe(fileStream);
 
-    fileStream.on('finish', () => {
+    fileStream.on('finish', async () => {
       console.log('Video downloaded:', tempFilePath);
 
       // Probe the video to check streams
