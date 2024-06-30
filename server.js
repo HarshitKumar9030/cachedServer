@@ -16,7 +16,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 const corsOptions = {
   origin: '*', 
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
   optionsSuccessStatus: 204
 };
 
