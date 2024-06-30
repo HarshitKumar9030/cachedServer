@@ -14,11 +14,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 
 const corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "https://hogwart.tech",
-  ], 
+  origin: '*', 
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   optionsSuccessStatus: 204
