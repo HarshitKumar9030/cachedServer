@@ -1,9 +1,9 @@
 const fs = require('fs-extra');
 const path = require('path');
-const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const { exec } = require('child_process');
 const { pipeline } = require('stream');
+const youtubedl = require('youtube-dl-exec');
 const Video = require('../models/Video');
 const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 
@@ -53,12 +53,11 @@ exports.downloadVideo = async (req, res) => {
     const tempFilePath = path.join(DOWNLOADS_FOLDER, `${title}.mp4`);
     console.log('Temporary file path:', tempFilePath);
 
-    const videoStream = ytdl(url, { quality: 'highest' });
-    const fileStream = fs.createWriteStream(tempFilePath);
-
-    videoStream.pipe(fileStream);
-
-    fileStream.on('finish', async () => {
+    // Use youtube-dl to download the video
+    youtubedl(url, {
+      output: tempFilePath,
+      format: 'bestvideo+bestaudio'
+    }).then(output => {
       console.log('Video downloaded:', tempFilePath);
 
       // Probe the video to check streams
@@ -79,7 +78,6 @@ exports.downloadVideo = async (req, res) => {
         console.log('Audio stream found:', audioStream);
 
         const ffmpegCommand = ffmpeg(tempFilePath)
-          .inputOptions('-f mp4')  // Explicitly specify the input format
           .toFormat('wav')
           .audioCodec('pcm_s16le');
 
@@ -114,10 +112,7 @@ exports.downloadVideo = async (req, res) => {
           }
         });
       });
-    });
-
-    fileStream.on('error', (err) => {
-      fs.removeSync(tempFilePath);
+    }).catch(err => {
       console.error(`Error downloading video: ${err.message}`);
       res.status(500).json({ error: `Error downloading video: ${err.message}` });
     });
