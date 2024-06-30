@@ -20,7 +20,7 @@ async function checkStorageSize(folder) {
 
 exports.downloadVideo = async (req, res) => {
   try {
-    const { url } = req.query;
+    const { url } = req.body; // Change here to use req.body instead of req.query
 
     if (!url || !ytdl.validateURL(url)) {
       console.log('Invalid or missing URL:', url);
@@ -72,7 +72,7 @@ exports.downloadVideo = async (req, res) => {
               console.error(`Sync script errors: ${stderr}`);
             });
 
-            res.download(filePath);
+            res.download(filePath); // Send the downloaded file
           } catch (error) {
             console.error(`Error saving video or updating trends: ${error.message}`);
             res.status(500).json({ error: `Error saving video or updating trends: ${error.message}` });

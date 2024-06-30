@@ -3,7 +3,7 @@
 # Define the local and remote paths
 LOCAL_PATH="/var/www/videos/"
 REMOTE_USER="azureuser"
-REMOTE_SERVER="secondary-server-ip"
+REMOTE_SERVER="20.197.7.173"
 REMOTE_PATH="/var/www/videos/"
 
 # Sync downloads folder from current server to the secondary server
