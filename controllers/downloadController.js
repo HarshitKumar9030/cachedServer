@@ -27,15 +27,15 @@ exports.downloadVideo = async (req, res) => {
   try {
     const { url } = req.body;
 
-    if (!url || !ytdl.validateURL(url)) {
+    if (!url) {
       console.log('Invalid or missing URL:', url);
       return res.status(400).json({ error: 'Invalid or missing URL' });
     }
 
     console.log('Valid URL:', url);
-    const videoInfo = await ytdl.getInfo(url);
-    const videoId = videoInfo.videoDetails.videoId;
-    const title = videoInfo.videoDetails.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
+    const videoInfo = await youtubedl(url, { dumpJson: true });
+    const videoId = videoInfo.id;
+    const title = videoInfo.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
     const filePath = path.join(DOWNLOADS_FOLDER, `${title}.wav`);
     console.log('Downloading video:', title);
 
@@ -57,7 +57,7 @@ exports.downloadVideo = async (req, res) => {
     youtubedl(url, {
       output: tempFilePath,
       format: 'bestvideo+bestaudio'
-    }).then(output => {
+    }).then(() => {
       console.log('Video downloaded:', tempFilePath);
 
       // Probe the video to check streams
