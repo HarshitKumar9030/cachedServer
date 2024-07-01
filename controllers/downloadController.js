@@ -7,7 +7,7 @@ const ytdl = require('@distube/ytdl-core');
 const Video = require('../models/Video');
 const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 
-const DOWNLOADS_FOLDER = path.join(__dirname, '../../videos');
+const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10);
 
 
