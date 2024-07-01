@@ -32,8 +32,7 @@ app.use((req, res, next) => {
   next();
 });
 
-
-const DOWNLOADS_FOLDER = path.join(__dirname, '/home/harshit/cachedServer/videos');
+const DOWNLOADS_FOLDER = path.join(__dirname, 'videos');
 app.use('/videos', express.static(DOWNLOADS_FOLDER));
 
 app.use('/api', downloadRoutes);
