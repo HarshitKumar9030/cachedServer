@@ -3,16 +3,13 @@ const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const { exec } = require('child_process');
 const { pipeline } = require('stream');
-const youtubedl = require('youtube-dl-exec');
+const ytdl = require('@distube/ytdl-core');
 const Video = require('../models/Video');
 const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 
-const DOWNLOADS_FOLDER = '/home/azureuser/cachedServer/videos';
+const DOWNLOADS_FOLDER = '/home/harshit/cachedServer/videos'; // Updated path for Windows
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10);
 
-// Set the path to the ffmpeg and ffprobe binaries
-ffmpeg.setFfmpegPath('/usr/bin/ffmpeg');  // Update this path if necessary
-ffmpeg.setFfprobePath('/usr/bin/ffprobe');  // Update this path if necessary
 
 async function checkStorageSize(folder) {
   try {
@@ -28,16 +25,16 @@ exports.downloadVideo = async (req, res) => {
     const { url } = req.body;
 
     if (!url) {
-      console.log('Invalid or missing URL:', url);
+      console.error('Invalid or missing URL:', url);
       return res.status(400).json({ error: 'Invalid or missing URL' });
     }
 
     console.log('Valid URL:', url);
-    const videoInfo = await youtubedl(url, { dumpJson: true });
-    const videoId = videoInfo.id;
-    const title = videoInfo.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
+
+    const videoInfo = await ytdl.getInfo(url);
+    const videoId = videoInfo.videoDetails.videoId;
+    const title = videoInfo.videoDetails.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
     const filePath = path.join(DOWNLOADS_FOLDER, `${title}.wav`);
-    console.log('Downloading video:', title);
 
     const existingVideo = await Video.findOne({ videoId, format: 'wav' });
     if (existingVideo) {
@@ -46,21 +43,22 @@ exports.downloadVideo = async (req, res) => {
 
     const currentSize = await checkStorageSize(DOWNLOADS_FOLDER);
     if (currentSize >= MAX_STORAGE_SIZE) {
-      console.log('Storage limit reached:', currentSize);
+      console.error('Storage limit reached:', currentSize);
       return res.status(507).json({ error: 'Storage limit reached' });
     }
 
-    const tempFilePath = path.join(DOWNLOADS_FOLDER, `${title}.mp4`);
-    console.log('Temporary file path:', tempFilePath);
+    const tempFilePath = path.join(DOWNLOADS_FOLDER, `${title}.mp3`);
 
-    // Use youtube-dl to download the video
-    youtubedl(url, {
-      output: tempFilePath,
-      format: 'bestvideo+bestaudio'
-    }).then(() => {
-      console.log('Video downloaded:', tempFilePath);
+    console.log('Starting audio download to:', tempFilePath);
 
-      // Probe the video to check streams
+    const downloadStream = ytdl(url, { filter: 'audioonly', quality: 'highestaudio' });
+    const tempFileStream = fs.createWriteStream(tempFilePath);
+
+    downloadStream.pipe(tempFileStream);
+
+    tempFileStream.on('finish', () => {
+      console.log('Audio download finished:', tempFilePath);
+
       ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
         if (err) {
           fs.removeSync(tempFilePath);
@@ -71,8 +69,8 @@ exports.downloadVideo = async (req, res) => {
         const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
         if (!audioStream) {
           fs.removeSync(tempFilePath);
-          console.error('No audio streams found in downloaded video');
-          return res.status(500).json({ error: 'No audio streams found in downloaded video' });
+          console.error('No audio streams found in downloaded audio');
+          return res.status(500).json({ error: 'No audio streams found in downloaded audio' });
         }
 
         console.log('Audio stream found:', audioStream);
@@ -86,12 +84,12 @@ exports.downloadVideo = async (req, res) => {
         pipeline(ffmpegCommand, wavStream, async (err) => {
           if (err) {
             fs.removeSync(tempFilePath);
-            console.error(`Error converting video to WAV: ${err.message}`);
-            return res.status(500).json({ error: `Error converting video to WAV: ${err.message}` });
+            console.error(`Error converting audio to WAV: ${err.message}`);
+            return res.status(500).json({ error: `Error converting audio to WAV: ${err.message}` });
           }
 
           try {
-            console.log('FFmpeg conversion completed, saving video info to DB and cleaning up...');
+            console.log('FFmpeg conversion completed, saving audio info to DB and cleaning up...');
             await Video.create({ videoId, format: 'wav', filePath });
             await updateTrendingWords(title, stopWords);
             fs.removeSync(tempFilePath);
@@ -107,15 +105,18 @@ exports.downloadVideo = async (req, res) => {
 
             res.json({ filePath, title });
           } catch (error) {
-            console.error(`Error saving video or updating trends: ${error.message}`);
-            res.status(500).json({ error: `Error saving video or updating trends: ${error.message}` });
+            console.error(`Error saving audio or updating trends: ${error.message}`);
+            res.status(500).json({ error: `Error saving audio or updating trends: ${error.message}` });
           }
         });
       });
-    }).catch(err => {
-      console.error(`Error downloading video: ${err.message}`);
-      res.status(500).json({ error: `Error downloading video: ${err.message}` });
     });
+
+    downloadStream.on('error', (err) => {
+      console.error(`Error downloading audio: ${err.message}`);
+      res.status(500).json({ error: `Error downloading audio: ${err.message}` });
+    });
+
   } catch (error) {
     console.error(`Server error: ${error.message}`);
     res.status(500).json({ error: `Server error: ${error.message}` });
