@@ -1,44 +1,63 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+const cluster = require('cluster');
+const http = require('http');
+const numCPUs = require('os').cpus().length;
 
-const downloadRoutes = require('./routes/downloadRoutes');
-const trendRoutes = require('./routes/trendRoutes');
+if (cluster.isMaster) {
+  console.log(`Master ${process.pid} is running`);
 
-const app = express();
+  // Fork workers.
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
 
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`Worker ${worker.process.pid} died`);
+  });
+} else {
+  // Workers can share any TCP connection
+  // In this case it is an HTTP server
+  const express = require('express');
+  const mongoose = require('mongoose');
+  const cors = require('cors');
+  const path = require('path');
+  require('dotenv').config();
 
-const corsOptions = {
-  origin: '*', 
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-  preflightContinue: false,
-  credentials: true,
-  optionsSuccessStatus: 204
-};
+  const downloadRoutes = require('./routes/downloadRoutes');
+  const trendRoutes = require('./routes/trendRoutes');
 
-app.use(cors(corsOptions));
-app.use(express.json());
+  const app = express();
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Change * to specific origin in production
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  next();
-});
+  mongoose.connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 
-const DOWNLOADS_FOLDER = path.join(__dirname, 'videos');
-app.use('/videos', express.static(DOWNLOADS_FOLDER));
+  const corsOptions = {
+    origin: '*', 
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    preflightContinue: false,
+    credentials: true,
+    optionsSuccessStatus: 204
+  };
 
-app.use('/api', downloadRoutes);
-app.use('/api', trendRoutes);
+  app.use(cors(corsOptions));
+  app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    next();
+  });
+
+  const DOWNLOADS_FOLDER = path.join(__dirname, 'videos');
+  app.use('/videos', express.static(DOWNLOADS_FOLDER));
+
+  app.use('/api', downloadRoutes);
+  app.use('/api', trendRoutes);
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Worker ${process.pid} running on port ${PORT}`);
+  });
+}
