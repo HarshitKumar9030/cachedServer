@@ -22,6 +22,7 @@ if (cluster.isMaster) {
   const downloadRoutes = require('./routes/downloadRoutes');
   const trendRoutes = require('./routes/trendRoutes');
   const audioConversionRoutes = require('./routes/audioConversionRoutes');
+  const videoRoutes = require('./routes/videoRoutes');
 
   const app = express();
 
@@ -56,6 +57,7 @@ if (cluster.isMaster) {
   app.use('/api', downloadRoutes);
   app.use('/api', trendRoutes);
   app.use('/api', audioConversionRoutes);
+  app.use('/api', require('./routes/videoRoutes'));
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
