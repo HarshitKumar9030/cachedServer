@@ -35,10 +35,11 @@ exports.downloadVideo = async (req, res) => {
     const title = videoInfo.videoDetails.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
     const filePath = path.join(DOWNLOADS_FOLDER, `${title}.wav`);
     const thumbnail = videoInfo.videoDetails.thumbnails[0].url; // Get the thumbnail URL
+    const creatorName = videoInfo.videoDetails.author.name; // Get the creator name
 
     const existingVideo = await Video.findOne({ videoId, format: 'wav' });
     if (existingVideo) {
-      return res.json({ filePath: existingVideo.filePath, title, thumbnail: existingVideo.thumbnail });
+      return res.json({ filePath: existingVideo.filePath, title, thumbnail: existingVideo.thumbnail, creatorName: existingVideo.creatorName });
     }
 
     const currentSize = await checkStorageSize(DOWNLOADS_FOLDER);
@@ -90,7 +91,7 @@ exports.downloadVideo = async (req, res) => {
 
           try {
             console.log('FFmpeg conversion completed, saving audio info to DB and cleaning up...');
-            await Video.create({ videoId, format: 'wav', filePath, thumbnail });
+            await Video.create({ videoId, format: 'wav', filePath, thumbnail, creatorName });
             await updateTrendingWords(title, stopWords);
             fs.removeSync(tempFilePath);
 
@@ -103,7 +104,7 @@ exports.downloadVideo = async (req, res) => {
               console.error(`Sync script errors: ${stderr}`);
             });
 
-            res.json({ filePath, title, thumbnail });
+            res.json({ filePath, title, thumbnail, creatorName });
           } catch (error) {
             console.error(`Error saving audio or updating trends: ${error.message}`);
             res.status(500).json({ error: `Error saving audio or updating trends: ${error.message}` });
