@@ -5,7 +5,6 @@ const numCPUs = require('os').cpus().length;
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
 
-  // Fork workers.
   for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
   }
@@ -14,8 +13,6 @@ if (cluster.isMaster) {
     console.log(`Worker ${worker.process.pid} died`);
   });
 } else {
-  // Workers can share any TCP connection
-  // In this case it is an HTTP server
   const express = require('express');
   const mongoose = require('mongoose');
   const cors = require('cors');
@@ -24,6 +21,7 @@ if (cluster.isMaster) {
 
   const downloadRoutes = require('./routes/downloadRoutes');
   const trendRoutes = require('./routes/trendRoutes');
+  const audioConversionRoutes = require('./routes/audioConversionRoutes');
 
   const app = express();
 
@@ -52,9 +50,12 @@ if (cluster.isMaster) {
 
   const DOWNLOADS_FOLDER = path.join(__dirname, 'videos');
   app.use('/videos', express.static(DOWNLOADS_FOLDER));
+  app.use('/uploads', express.static('uploads')); 
+  app.use('/converted', express.static('converted')); 
 
   app.use('/api', downloadRoutes);
   app.use('/api', trendRoutes);
+  app.use('/api', audioConversionRoutes);
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

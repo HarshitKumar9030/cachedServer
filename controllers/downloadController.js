@@ -10,7 +10,6 @@ const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10);
 
-
 async function checkStorageSize(folder) {
   try {
     const { size } = await fs.stat(folder);
@@ -35,10 +34,11 @@ exports.downloadVideo = async (req, res) => {
     const videoId = videoInfo.videoDetails.videoId;
     const title = videoInfo.videoDetails.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
     const filePath = path.join(DOWNLOADS_FOLDER, `${title}.wav`);
+    const thumbnail = videoInfo.videoDetails.thumbnails[0].url; // Get the thumbnail URL
 
     const existingVideo = await Video.findOne({ videoId, format: 'wav' });
     if (existingVideo) {
-      return res.json({ filePath: existingVideo.filePath, title });
+      return res.json({ filePath: existingVideo.filePath, title, thumbnail: existingVideo.thumbnail });
     }
 
     const currentSize = await checkStorageSize(DOWNLOADS_FOLDER);
@@ -90,7 +90,7 @@ exports.downloadVideo = async (req, res) => {
 
           try {
             console.log('FFmpeg conversion completed, saving audio info to DB and cleaning up...');
-            await Video.create({ videoId, format: 'wav', filePath });
+            await Video.create({ videoId, format: 'wav', filePath, thumbnail });
             await updateTrendingWords(title, stopWords);
             fs.removeSync(tempFilePath);
 
@@ -103,7 +103,7 @@ exports.downloadVideo = async (req, res) => {
               console.error(`Sync script errors: ${stderr}`);
             });
 
-            res.json({ filePath, title });
+            res.json({ filePath, title, thumbnail });
           } catch (error) {
             console.error(`Error saving audio or updating trends: ${error.message}`);
             res.status(500).json({ error: `Error saving audio or updating trends: ${error.message}` });

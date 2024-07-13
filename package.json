@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "cleanup": "node cleanup.js"
+  },
+
   "dependencies": {
     "@distube/ytdl-core": "^4.13.4",
     "child_process": "^1.0.2",
