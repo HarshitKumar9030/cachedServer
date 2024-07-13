@@ -1,6 +1,6 @@
 const fs = require('fs-extra');
 const path = require('path');
-const Video = require('../models/video');
+const Video = require('../models/Video');
 
 const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 
