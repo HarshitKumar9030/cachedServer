@@ -7,18 +7,24 @@ const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 exports.getVideos = async (req, res) => {
   try {
     const files = await fs.readdir(DOWNLOADS_FOLDER);
-    
+
     if (files.length === 0) {
+      console.log("No files found in the downloads folder.");
       return res.json([]);
     }
 
     const videos = await Promise.all(
       files.map(async (file) => {
         const filePath = path.join(DOWNLOADS_FOLDER, file);
+        console.log(`Checking file: ${filePath}`);
+        
         let video;
         
         try {
           video = await Video.findOne({ filePath }).exec();
+          if (!video) {
+            console.log(`No video found in DB for file path: ${filePath}`);
+          }
         } catch (err) {
           console.error(`Error finding video in DB for file ${file}: ${err.message}`);
           video = null;
@@ -28,7 +34,7 @@ exports.getVideos = async (req, res) => {
           name: file,
           path: filePath,
           creatorName: video ? video.creatorName : 'Unknown Creator',
-          thumbnail: video ? video.thumbnail : null
+          thumbnail: video ? video.thumbnail : null,
         };
       })
     );
