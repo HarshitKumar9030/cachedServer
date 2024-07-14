@@ -9,7 +9,7 @@ exports.getVideos = async (req, res) => {
     const files = await fs.readdir(DOWNLOADS_FOLDER);
     const videos = await Promise.all(files.map(async (file) => {
       const filePath = path.join(DOWNLOADS_FOLDER, file);
-      const video = await Video.findOne({ filePath: `/home/harshit/cachedServer/videos/${file}` }).exec();
+      const video = await Video.findOne({ filePath }).exec();
       return {
         name: file,
         path: filePath,
