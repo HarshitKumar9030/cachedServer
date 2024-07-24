@@ -6,39 +6,37 @@ const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 
 exports.getVideos = async (req, res) => {
   try {
-    const files = await fs.readdir(DOWNLOADS_FOLDER);
+    // Fetch all videos from the database
+    const videoEntries = await Video.find().exec();
 
-    if (files.length === 0) {
-      console.log("No files found in the downloads folder.");
+    if (videoEntries.length === 0) {
+      console.log("No video entries found in the database.");
       return res.json([]);
     }
 
     const videos = await Promise.all(
-      files.map(async (file) => {
-        const filePath = path.join(DOWNLOADS_FOLDER, file);
+      videoEntries.map(async (video) => {
+        const filePath = video.filePath;
         console.log(`Checking file: ${filePath}`);
 
-        let video = null;
+        let fileExists = false;
 
         try {
-          // Normalize the path to ensure it matches the DB format
-          const dbFilePath = path.resolve(filePath);
-          console.log(`Searching for video in DB with path: ${dbFilePath}`);
-          video = await Video.findOne({ filePath: dbFilePath }).exec();
-          if (!video) {
-            console.log(`No video found in DB for file path: ${dbFilePath}`);
+          fileExists = await fs.pathExists(filePath);
+          if (!fileExists) {
+            console.log(`File does not exist: ${filePath}`);
           } else {
-            console.log(`Video found in DB for file path: ${dbFilePath}`);
+            console.log(`File exists: ${filePath}`);
           }
         } catch (err) {
-          console.error(`Error finding video in DB for file ${file}: ${err.message}`);
+          console.error(`Error checking file existence for ${filePath}: ${err.message}`);
         }
 
         return {
-          name: file,
-          path: filePath,
-          creatorName: video ? video.creatorName : 'Unknown Creator',
-          thumbnail: video ? video.thumbnail : null,
+          name: path.basename(filePath),
+          path: fileExists ? filePath : null,
+          creatorName: video.creatorName,
+          thumbnail: video.thumbnail,
         };
       })
     );
