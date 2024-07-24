@@ -18,16 +18,17 @@ exports.getVideos = async (req, res) => {
         const filePath = path.join(DOWNLOADS_FOLDER, file);
         console.log(`Checking file: ${filePath}`);
         
-        let video;
-        
+        let video = null;
+
         try {
           video = await Video.findOne({ filePath }).exec();
           if (!video) {
             console.log(`No video found in DB for file path: ${filePath}`);
+          } else {
+            console.log(`Video found in DB for file path: ${filePath}`);
           }
         } catch (err) {
           console.error(`Error finding video in DB for file ${file}: ${err.message}`);
-          video = null;
         }
 
         return {
@@ -39,6 +40,7 @@ exports.getVideos = async (req, res) => {
       })
     );
 
+    console.log("Videos retrieved:", videos);
     res.json(videos);
   } catch (error) {
     console.error(`Error retrieving videos: ${error.message}`);
