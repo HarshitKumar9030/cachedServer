@@ -16,7 +16,7 @@ exports.getVideos = async (req, res) => {
 
     const videos = await Promise.all(
       videoEntries.map(async (video) => {
-        const filePath = video.filePath;
+        const filePath = video.filePath || path.join(DOWNLOADS_FOLDER, video.name);
         console.log(`Checking file: ${filePath}`);
 
         let fileExists = false;
@@ -35,8 +35,8 @@ exports.getVideos = async (req, res) => {
         return {
           name: path.basename(filePath),
           path: fileExists ? filePath : null,
-          creatorName: video.creatorName,
-          thumbnail: video.thumbnail,
+          creatorName: video.creatorName || 'Unknown Creator',
+          thumbnail: video.thumbnail || null
         };
       })
     );
