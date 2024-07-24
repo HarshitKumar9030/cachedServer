@@ -10,24 +10,18 @@ exports.getVideos = async (req, res) => {
     const videoEntries = await Video.find().exec();
 
     if (videoEntries.length === 0) {
-      console.log("No video entries found in the database.");
       return res.json([]);
     }
 
     const videos = await Promise.all(
       videoEntries.map(async (video) => {
         const filePath = video.filePath || path.join(DOWNLOADS_FOLDER, video.name);
-        console.log(`Checking file: ${filePath}`);
 
         let fileExists = false;
 
         try {
           fileExists = await fs.pathExists(filePath);
-          if (!fileExists) {
-            console.log(`File does not exist: ${filePath}`);
-          } else {
-            console.log(`File exists: ${filePath}`);
-          }
+          
         } catch (err) {
           console.error(`Error checking file existence for ${filePath}: ${err.message}`);
         }
@@ -41,7 +35,6 @@ exports.getVideos = async (req, res) => {
       })
     );
 
-    console.log("Videos retrieved:", videos);
     res.json(videos);
   } catch (error) {
     console.error(`Error retrieving videos: ${error.message}`);
