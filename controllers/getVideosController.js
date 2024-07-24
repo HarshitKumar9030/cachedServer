@@ -21,8 +21,9 @@ exports.getVideos = async (req, res) => {
         let video = null;
 
         try {
-          // Adjust filePath to match the structure in your database
+          // Normalize the path to ensure it matches the DB format
           const dbFilePath = path.resolve(filePath);
+          console.log(`Searching for video in DB with path: ${dbFilePath}`);
           video = await Video.findOne({ filePath: dbFilePath }).exec();
           if (!video) {
             console.log(`No video found in DB for file path: ${dbFilePath}`);
