@@ -17,15 +17,17 @@ exports.getVideos = async (req, res) => {
       files.map(async (file) => {
         const filePath = path.join(DOWNLOADS_FOLDER, file);
         console.log(`Checking file: ${filePath}`);
-        
+
         let video = null;
 
         try {
-          video = await Video.findOne({ filePath }).exec();
+          // Adjust filePath to match the structure in your database
+          const dbFilePath = path.resolve(filePath);
+          video = await Video.findOne({ filePath: dbFilePath }).exec();
           if (!video) {
-            console.log(`No video found in DB for file path: ${filePath}`);
+            console.log(`No video found in DB for file path: ${dbFilePath}`);
           } else {
-            console.log(`Video found in DB for file path: ${filePath}`);
+            console.log(`Video found in DB for file path: ${dbFilePath}`);
           }
         } catch (err) {
           console.error(`Error finding video in DB for file ${file}: ${err.message}`);
