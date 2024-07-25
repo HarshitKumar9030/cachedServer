@@ -1,5 +1,5 @@
 const servers = [
-  { name: 'Server 1', ip: '20.55.64.20', url: 'https://server.hogwart.tech/' }
+  { name: 'Server 1', ip: '20.55.64.20', url: 'https://server.hogwart.tech/api/trends' }
 ];
 
 const getStatus = async (req, res) => {
