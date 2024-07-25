@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const generateEmailTemplate = require('../utils/emailTemplate');
-const adminTemplate = require('../utils/emailTemplate');
+const adminTemplate = require('../utils/adminEmail');
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
