@@ -41,7 +41,6 @@ if (cluster.isMaster) {
     process.exit(1);
   });
 
-  app.use(helmet());
   app.use(cors({
     origin: '*', 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
