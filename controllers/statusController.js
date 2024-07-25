@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 const servers = [
   { name: 'Server 1', ip: '20.55.64.20', url: 'http://20.55.64.20' }
