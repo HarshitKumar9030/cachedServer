@@ -2,7 +2,6 @@
   "scripts": {
     "cleanup": "node cleanup.js"
   },
-
   "dependencies": {
     "@distube/ytdl-core": "^4.13.4",
     "child_process": "^1.0.2",
@@ -14,6 +13,7 @@
     "fs-extra": "^11.2.0",
     "http": "^0.0.1-security",
     "mongoose": "^8.4.4",
+    "node-fetch": "^3.3.2",
     "os": "^0.1.2",
     "path": "^0.12.7",
     "stream": "^0.0.3",

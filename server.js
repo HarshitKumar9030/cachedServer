@@ -58,6 +58,7 @@ if (cluster.isMaster) {
   app.use('/api', trendRoutes);
   app.use('/api', audioConversionRoutes);
   app.use('/api', require('./routes/videoRoutes'));
+  app.use('/api', require('./routes/statusRoutes'));
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
