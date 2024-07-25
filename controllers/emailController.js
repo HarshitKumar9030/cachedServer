@@ -12,7 +12,8 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendContactEmail = async (req, res) => {
-  const { name, email, message } = req.body.creds;
+  console.log(req.body);
+  const { name, email, message } = req.body;
 
   const mailOptions = {
     from: process.env.SMTP_FROM,
