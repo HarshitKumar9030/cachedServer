@@ -14,7 +14,7 @@ const {
   stopWords
 } = require('../utils/trendingUtils');
 
-const proxyUrl = 'http://142.93.6.218:80';
+const proxyUrl = 'http://34.172.92.211:3128';
 
 const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10) || 1000000000; // Default to 1GB
