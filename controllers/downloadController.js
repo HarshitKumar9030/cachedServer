@@ -1,23 +1,17 @@
 const fs = require('fs-extra');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
-const {
-  exec
-} = require('child_process');
+const { exec } = require('child_process');
 const ytdl = require('@distube/ytdl-core');
-const {
-  ProxyAgent
-} = require('undici');
+const { ProxyAgent } = require('undici');
 const Video = require('../models/Video');
-const {
-  updateTrendingWords,
-  stopWords
-} = require('../utils/trendingUtils');
+const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
 
 const proxyUrl = 'http://34.172.92.211:3128';
-
 const DOWNLOADS_FOLDER = path.join(__dirname, '../videos');
 const MAX_STORAGE_SIZE = parseInt(process.env.MAX_STORAGE_SIZE, 10) || 1000000000; // Default to 1GB
+
+const cookies = 'SID=your_sid_value; HSID=your_hsid_value; SSID=your_ssid_value; SAPISID=your_sapisid_value; APISID=your_apisid_value'; // Replace with your actual cookies
 
 async function checkStorageSize(folder) {
   try {
@@ -38,9 +32,7 @@ async function checkStorageSize(folder) {
 
 exports.downloadVideo = async (req, res) => {
   try {
-    const {
-      url
-    } = req.body;
+    const { url } = req.body;
 
     if (!url) {
       console.error('Invalid or missing URL:', url);
@@ -52,11 +44,16 @@ exports.downloadVideo = async (req, res) => {
     console.log('Valid URL:', url);
 
     const dispatcher = new ProxyAgent(proxyUrl);
+
     const videoInfo = await ytdl.getInfo(url, {
       requestOptions: {
-        dispatcher
+        dispatcher,
+        headers: {
+          Cookie: cookies 
+        }
       }
     });
+
     const videoId = videoInfo.videoDetails.videoId;
     const sanitizedTitle = videoInfo.videoDetails.title.replace(/[^\w\s]/gi, '').replace(/ /g, '_');
     const fileName = `${sanitizedTitle}_${videoId}.wav`;
@@ -94,7 +91,10 @@ exports.downloadVideo = async (req, res) => {
       filter: 'audioonly',
       quality: 'highestaudio',
       requestOptions: {
-        dispatcher
+        dispatcher,
+        headers: {
+          Cookie: cookies 
+        }
       }
     });
 
