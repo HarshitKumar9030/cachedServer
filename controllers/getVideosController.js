@@ -30,6 +30,7 @@ exports.getVideos = async (req, res) => {
           name: path.basename(filePath),
           videoId: video.videoId,
           path: fileExists ? filePath : null,
+          description: video.description || 'No description available',
           creatorName: video.creatorName || 'Unknown',
           thumbnail: video.thumbnail || null
         };
