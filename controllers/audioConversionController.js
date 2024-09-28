@@ -24,7 +24,7 @@ const convertAudio = (req, res) => {
   let command = ffmpeg(file.path);
 
   if (outputFormat === 'wav') {
-    command = command.audioCodec('pcm_s16le').audioChannels(2).audioFrequency(44100);
+    command = command.audioCodec('pcm_s32le').audioChannels(2).audioFrequency(44100);
   }
 
   command
