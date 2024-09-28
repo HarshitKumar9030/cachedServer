@@ -1,4 +1,3 @@
-const express = require('express');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
@@ -6,8 +5,6 @@ const fs = require('fs-extra');
 const { exec } = require('child_process');
 const Video = require('../models/Video');
 const { updateTrendingWords, stopWords } = require('../utils/trendingUtils');
-
-const router = express.Router();
 
 const UPLOADS_FOLDER = path.join(__dirname, '../uploads');
 const OUTPUT_FOLDER = path.join(__dirname, '../videos');
@@ -46,7 +43,7 @@ async function checkStorageSize(folder) {
   }
 }
 
-router.post('/upload', upload.single('file'), async (req, res) => {
+exports.convertToWav = async (req, res) => {
   try {
     const tempFilePath = req.file.path;
     const fileName = req.file.originalname;
@@ -54,22 +51,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const outputFileName = `${fileBaseName}.wav`;
     const outputFilePath = path.join(OUTPUT_FOLDER, outputFileName);
 
-    // Extract additional data from the request body
-    const {
-      title,
-      thumbnail,
-      description,
-      videoId,
-      creatorName,
-    } = req.body;
+    const { title, thumbnail, description, videoId, creatorName } = req.body;
 
     if (!title || !videoId) {
-      // Ensure essential metadata is present
       await fs.remove(tempFilePath);
       return res.status(400).json({ error: 'Missing video metadata.' });
     }
 
-    // Check storage size before converting
     const currentSize = await checkStorageSize(OUTPUT_FOLDER);
     if (currentSize >= MAX_STORAGE_SIZE) {
       console.error('Storage limit reached.');
@@ -77,7 +65,6 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(507).json({ error: 'Storage limit reached.' });
     }
 
-    // Check if the video already exists in the database
     const existingVideo = await Video.findOne({ videoId, format: 'wav' });
     if (existingVideo && await fs.pathExists(existingVideo.filePath)) {
       await fs.remove(tempFilePath); // Remove the uploaded file
@@ -92,16 +79,13 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Convert to WAV
     ffmpeg(tempFilePath)
       .toFormat('wav')
       .audioCodec('pcm_s16le')
       .on('end', async () => {
         try {
-          // Delete the temporary MP3 file
           await fs.remove(tempFilePath);
 
-          // Save video info to database
           await Video.create({
             videoId,
             format: 'wav',
@@ -112,10 +96,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             description,
           });
 
-          // Update trending words
           await updateTrendingWords(title, stopWords);
 
-          // Sync videos (if applicable)
           exec('sh ./scripts/syncVideos.sh', (error, stdout, stderr) => {
             if (error) {
               console.error(`Error executing sync script: ${error.message}`);
@@ -125,10 +107,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             }
           });
 
-          // Return the URL of the processed file
-          const fileUrl = `https://server.hogwart.tech/videos/${encodeURIComponent(
-            outputFileName
-          )}`;
+          const fileUrl = `https://server.hogwart.tech/videos/${encodeURIComponent(outputFileName)}`;
 
           res.json({ success: true, fileUrl, title, thumbnail, creatorName });
         } catch (error) {
@@ -146,6 +125,4 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     console.error(`Error processing uploaded file: ${error.message}`);
     res.status(500).json({ error: `Error processing uploaded file: ${error.message}` });
   }
-});
-
-module.exports = router;
+};
